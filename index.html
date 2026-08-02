@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeDrive // Fuel Stop Planner</title>
+    <style>
+        :root {
+            --bg: #09090b; --card: rgba(20,20,23,0.7); --border: rgba(255,255,255,0.06);
+            --text: #f4f4f5; --text-mut: #a1a1aa; --indigo: #6366f1; --teal: #14b8a6; --rose: #f43f5e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body {
+            background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem 1rem;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(99,102,241,0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(20,184,166,0.06) 0%, transparent 40%);
+            display: flex; justify-content: center;
+        }
+        .c { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 1.25rem; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.8rem; flex-wrap: wrap; gap: 1rem; }
+        .lg { display: flex; align-items: center; gap: 0.5rem; }
+        .lg h1 { font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, #a5b4fc, #2dd4bf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .tgl { background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 0.15rem; border-radius: 99px; display: flex; position: relative; cursor: pointer; width: 160px; user-select: none; }
+        .tb { flex: 1; text-align: center; padding: 0.35rem; font-size: 0.7rem; font-weight: 700; z-index: 2; color: var(--text-mut); }
+        .tb.active { color: #fff; }
+        .ts { position: absolute; top: 0.15rem; left: 0.15rem; width: calc(50% - 0.15rem); height: calc(100% - 0.3rem); background: linear-gradient(135deg, var(--indigo), rgba(99,102,241,0.8)); border-radius: 99px; transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); z-index: 1; }
+        .tgl.metric .ts { transform: translateX(100%); background: linear-gradient(135deg, var(--teal), rgba(20,184,166,0.8)); }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+        @media (min-width: 800px) { .grid { grid-template-columns: 310px 1fr; } }
+        .card { background: var(--card); border: 1px solid var(--border); backdrop-filter: blur(10px); border-radius: 0.75rem; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+        .card-title { font-size: 0.9rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; }
+        .ig { display: flex; flex-direction: column; gap: 0.4rem; }
+        .ih { display: flex; justify-content: space-between; align-items: center; }
+        .il { font-size: 0.7rem; color: var(--text-mut); font-weight: 700; text-transform: uppercase; }
+        .iw { display: flex; align-items: center; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.15rem 0.3rem 0.15rem 0.5rem; width: 85px; justify-content: space-between; }
+        .iw input { background: transparent; border: none; color: #fff; width: 100%; font-size: 0.85rem; font-weight: 700; text-align: right; outline: none; }
+        .iu { font-size: 0.65rem; color: var(--text-mut); font-weight: 700; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.08); outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 2px solid var(--indigo); cursor: pointer; }
+        .metric input[type="range"]::-webkit-slider-thumb { border-color: var(--teal); }
+        .gb { width: 100%; height: 5px; background: rgba(255,255,255,0.04); border-radius: 99px; overflow: hidden; }
+        .gf { height: 100%; width: 75%; background: var(--indigo); transition: width 0.2s, background 0.2s; }
+        .stats { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+        @media (min-width: 500px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+        .sc { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.75rem; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .sc::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--indigo), var(--teal)); }
+        .sc.stops::before { background: var(--rose); }
+        .sl { font-size: 0.6rem; color: var(--text-mut); font-weight: 700; text-transform: uppercase; margin-bottom: 0.2rem; }
+        .sv { font-size: 1.4rem; font-weight: 800; color: #fff; }
+        .ss { font-size: 0.6rem; color: var(--text-mut); }
+        .rc { background: rgba(0,0,0,0.15); border-radius: 0.4rem; padding: 0.4rem 0; border: 1px solid rgba(255,255,255,0.02); overflow-x: auto; }
+        .rs { display: block; min-width: 450px; width: 100%; height: 60px; }
+        .st { font-size: 0.75rem; font-weight: 700; color: var(--text); text-transform: uppercase; margin-top: 0.4rem; }
+        .si { display: flex; flex-direction: column; gap: 0.35rem; max-height: 120px; overflow-y: auto; }
+        .sit { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.02); border-radius: 0.3rem; padding: 0.4rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
+        .sil { display: flex; align-items: center; gap: 0.4rem; }
+        .sb { width: 1.1rem; height: 1.1rem; border-radius: 50%; background: rgba(99,102,241,0.15); border: 1px solid var(--indigo); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; }
+        .sid { display: flex; flex-direction: column; }
+        .ssi { font-size: 0.6rem; color: var(--text-mut); }
+        .srf { font-weight: 700; color: var(--teal); }
+        .cc { height: 150px; }
+        .cs { width: 100%; height: 100%; display: block; }
+        .cl { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+        .cat { fill: var(--text-mut); font-size: 8px; font-weight: 600; }
+        .cg { stroke: rgba(255,255,255,0.03); stroke-width: 1; stroke-dasharray: 2 2; }
+        .cgl { stroke: rgba(244,63,94,0.25); stroke-width: 1; stroke-dasharray: 2 2; }
+        .cp { fill: #fff; stroke: var(--indigo); stroke-width: 2; r: 3; }
+        .metric .cp { stroke: var(--teal); }
+        .wn { background: rgba(244,63,94,0.05); border: 1px solid rgba(244,63,94,0.2); border-radius: 0.4rem; padding: 0.4rem 0.6rem; display: none; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: #fca5a5; }
+        footer { font-size: 0.65rem; color: var(--text-mut); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.6rem; display: flex; justify-content: space-between; align-items: center; }
+        .badge { background: rgba(244, 63, 94, 0.08); color: var(--rose); padding: 0.1rem 0.3rem; border-radius: 4px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="c" id="app">
+        <header>
+            <div class="lg">
+                <div class="lgi">⛽</div>
+                <h1>VibeDrive</h1>
+            </div>
+            <div class="tgl" id="unitToggle" onclick="toggleUnit()">
+                <div class="ts"></div>
+                <div class="tb active" id="btnImp">IMPERIAL</div>
+                <div class="tb" id="btnMet">METRIC</div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">⚙️ Configuration</div>
+                <div class="wn" id="warnBox">⚠️ <span id="warnText"></span></div>
+                <div class="ig">
+                    <div class="ih">
+                        <label class="il" for="nDist">Trip Distance</label>
+                        <div class="iw">
+                            <input type="number" id="nDist"><span class="iu" id="uDist">mi</span>
+                        </div>
+                    </div>
+                    <input type="range" id="rDist">
+                </div>
+                <div class="ig">
+                    <div class="ih">
+                        <label class="il" for="nEff">Fuel Efficiency</label>
+                        <div class="iw">
+                            <input type="number" id="nEff"><span class="iu" id="uEff">mpg</span>
+                        </div>
+                    </div>
+                    <input type="range" id="rEff">
+                </div>
+                <div class="ig">
+                    <div class="ih">
+                        <label class="il" for="nTank">Tank Size</label>
+                        <div class="iw">
+                            <input type="number" id="nTank"><span class="iu" id="uTank">gal</span>
+                        </div>
+                    </div>
+                    <input type="range" id="rTank">
+                </div>
+                <div class="ig">
+                    <div class="ih">
+                        <label class="il" for="nLevel">Current Tank</label>
+                        <div class="iw">
+                            <input type="number" id="nLevel"><span>%</span>
+                        </div>
+                    </div>
+                    <input type="range" id="rLevel" min="0" max="100" step="1">
+                    <div class="gb"><div class="gf" id="gFill"></div></div>
+                </div>
+            </div>
+
+            <div class="dashboard-layout">
+                <div class="stats">
+                    <div class="sc stops">
+                        <div class="sl">Stops Required</div>
+                        <div class="sv" id="oStops">0</div>
+                        <div class="ss" id="oStopsSub">No stops needed</div>
+                    </div>
+                    <div class="sc spacing">
+                        <div class="sl">Avg. Stop Spacing</div>
+                        <div class="sv" id="oSpace">--</div>
+                        <div class="ss" id="oSpaceSub">Safe interval</div>
+                    </div>
+                    <div class="sc fuel">
+                        <div class="sl">Total Fuel Used</div>
+                        <div class="sv" id="oFuel">0.0</div>
+                        <div class="ss" id="oFuelSub">gal consumed</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🗺️ Road Trip Stops Map</div>
+                    <div class="rc">
+                        <svg class="rs" id="rSvg" viewBox="0 0 600 60" preserveAspectRatio="none"></svg>
+                    </div>
+                    <div class="st">📋 Stops Schedule</div>
+                    <div class="si" id="stopContainer"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📈 Fuel Level Profile</div>
+                    <div class="cc">
+                        <svg class="cs" id="cSvg" viewBox="0 0 600 150" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="glowG" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+                                <linearGradient id="glowM" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div>VibeDrive &bull; SPA</div>
+            <div>Built with <span class="badge">10% Tank Safety Reserve Buffer</span></div>
+        </footer>
+    </div>
+
+    <script>
+        let sys = 'imperial';
+        const $ = id => document.getElementById(id);
+        const els = {
+            app: $('app'), toggle: $('unitToggle'), btnImp: $('btnImp'), btnMet: $('btnMet'),
+            nD: $('nDist'), rD: $('rDist'), nE: $('nEff'), rE: $('rEff'),
+            nT: $('nTank'), rT: $('rTank'), nL: $('nLevel'), rL: $('rLevel'),
+            uD: $('uDist'), uE: $('uEff'), uT: $('uTank'), gF: $('gFill'),
+            oS: $('oStops'), oSS: $('oStopsSub'), oSp: $('oSpace'), oSpS: $('oSpaceSub'),
+            oF: $('oFuel'), oFS: $('oFuelSub'), rS: $('rSvg'), cS: $('cSvg'),
+            sC: $('stopContainer'), wB: $('warnBox'), wT: $('warnText')
+        };
+
+        const conf = {
+            imperial: { d: [1, 1500, 5, 400, 'mi'], e: [5, 70, 0.5, 25, 'mpg'], t: [2, 40, 0.5, 15, 'gal'] },
+            metric: { d: [5, 2500, 10, 650, 'km'], e: [3, 25, 0.1, 9.4, 'L/100km'], t: [10, 150, 1, 60, 'L'] }
+        };
+
+        function setBounds(s) {
+            const c = conf[s];
+            const set = (n, r, b, lbl, txt) => {
+                n.min = b[0]; n.max = b[1]; n.step = n.id === 'nE' ? 0.1 : 1;
+                r.min = b[0]; r.max = b[1]; r.step = b[2]; lbl.innerText = txt;
+            };
+            set(els.nD, els.rD, c.d, els.uD, c.d[4]);
+            set(els.nE, els.rE, c.e, els.uE, c.e[4]);
+            set(els.nT, els.rT, c.t, els.uT, c.t[4]);
+        }
+
+        function sync(name, val) {
+            els[`n${name}`].value = val; els[`r${name}`].value = val;
+        }
+
+        function init() {
+            setBounds(sys);
+            sync('D', conf[sys].d[3]); sync('E', conf[sys].e[3]); sync('T', conf[sys].t[3]); sync('L', 75);
+            updateGauge(75);
+            
+            const bind = (name) => {
+                const n = els[`n${name}`], r = els[`r${name}`];
+                n.addEventListener('input', (e) => {
+                    let v = parseFloat(e.target.value) || 0; r.value = v;
+                    if (name === 'L') updateGauge(v);
+                    calc();
+                });
+                r.addEventListener('input', (e) => {
+                    n.value = e.target.value;
+                    if (name === 'L') updateGauge(e.target.value);
+                    calc();
+                });
+            };
+            ['D', 'E', 'T', 'L'].forEach(bind);
+            calc();
+        }
+
+        function updateGauge(pct) {
+            els.gF.style.width = pct + '%';
+            els.gF.style.background = pct <= 10 ? 'var(--rose)' : (pct <= 30 ? '#f59e0b' : (sys === 'imperial' ? 'var(--indigo)' : 'var(--teal)'));
+        }
+
+        function toggleUnit() {
+            const d = parseFloat(els.nD.value) || 0, e = parseFloat(els.nE.value) || 0, t = parseFloat(els.nT.value) || 0, l = parseFloat(els.nL.value) || 0;
+            const isImp = sys === 'imperial';
+            sys = isImp ? 'metric' : 'imperial';
+            
+            els.toggle.classList.toggle('metric', !isImp);
+            els.app.classList.toggle('metric', !isImp);
+            els.btnImp.classList.toggle('active', isImp);
+            els.btnMet.classList.toggle('active', !isImp);
+            setBounds(sys);
+            
+            if (isImp) {
+                sync('D', Math.min(2500, Math.max(5, Math.round(d * 1.6))));
+                sync('T', Math.min(150, Math.max(10, Math.round(t * 3.8))));
+                sync('E', e <= 0 ? 9.4 : Math.min(25, Math.max(3, Math.round(235 / e))));
+            } else {
+                sync('D', Math.min(1500, Math.max(1, Math.round(d / 1.6))));
+                sync('T', Math.min(40, Math.max(2, Math.round(t / 3.8))));
+                sync('E', e <= 0 ? 25 : Math.min(70, Math.max(5, Math.round(235 / e))));
+            }
+            updateGauge(l); calc();
+        }
+
+        function calc() {
+            const dist = parseFloat(els.nD.value) || 0, eff = parseFloat(els.nE.value) || 0, tank = parseFloat(els.nT.value) || 0, lvl = parseFloat(els.nL.value) || 0;
+            if (dist <= 0 || eff <= 0 || tank <= 0) {
+                els.wT.innerText = "Values must be greater than 0."; els.wB.style.display = 'flex';
+                clearOutputs(); return;
+            }
+            els.wB.style.display = 'none';
+
+            const isMet = sys === 'metric', uD = isMet ? 'km' : 'mi', uF = isMet ? 'L' : 'gal';
+            const rangeFull = isMet ? (tank / eff) * 100 : tank * eff;
+            const fuelPerDist = isMet ? eff / 100 : 1 / eff;
+
+            if (rangeFull < 1) {
+                els.wT.innerText = "Range too low."; els.wB.style.display = 'flex';
+                clearOutputs(); return;
+            }
+
+            const safety = 10;
+            let stops = [], pts = [{ x: 0, y: lvl }];
+            let x = 0, f = lvl, stopsLimit = 50, safetyExc = false, loopCount = 0;
+
+            while (x < dist) {
+                loopCount++;
+                if (loopCount > stopsLimit) { safetyExc = true; break; }
+                let dNext = f > safety ? rangeFull * ((f - safety) / 100) : 0;
+                if (x + dNext >= dist) {
+                    f = Math.max(0, f - ((dist - x) / rangeFull) * 100); x = dist; pts.push({ x: x, y: f });
+                } else {
+                    x += dNext; f = safety; pts.push({ x: x, y: f });
+                    stops.push({ id: stops.length + 1, dist: x, prev: stops.length === 0 ? x : x - stops[stops.length - 1].dist, refuel: ((100 - f) / 100) * tank });
+                    f = 100; pts.push({ x: x, y: f });
+                }
+            }
+
+            if (safetyExc) els.wT.innerText = `Too many stops. Capped at ${stopsLimit}.`;
+
+            const totalFuel = dist * fuelPerDist;
+            els.oS.innerText = stops.length;
+            els.oSS.innerText = stops.length === 0 ? "No stops needed" : `${stops.length} stop${stops.length > 1 ? 's' : ''} planned`;
+            
+            if (stops.length > 0) {
+                let sum = 0; stops.forEach(s => sum += s.prev);
+                els.oSp.innerText = `${Math.round(sum / stops.length)} ${uD}`; els.oSpS.innerText = "Safe interval";
+            } else {
+                els.oSp.innerText = "--"; els.oSpS.innerText = "Stops unnecessary";
+            }
+            els.oF.innerText = totalFuel.toFixed(1); els.oFS.innerText = `${uF} consumed`;
+
+            drawRoad(dist, stops, uD); drawChart(dist, pts, uD); drawList(stops, uD, uF);
+        }
+
+        function clearOutputs() {
+            els.oS.innerText = els.oSp.innerText = els.oF.innerText = "--";
+            els.oSS.innerText = els.oSpS.innerText = els.oFS.innerText = "Waiting...";
+            drawRoad(0, [], ''); drawChart(0, [], '');
+            els.sC.innerHTML = '<div class="sit" style="color:var(--text-mut);justify-content:center;font-style:italic">Awaiting inputs.</div>';
+        }
+
+        function drawRoad(dist, stops, uD) {
+            els.rS.innerHTML = '';
+            const sX = 40, eX = 560, roadY = 32, w = eX - sX;
+            const roadG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            const addLine = (stroke, w, dash) => {
+                const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                l.setAttribute("x1", sX - 5); l.setAttribute("y1", roadY); l.setAttribute("x2", eX + 5); l.setAttribute("y2", roadY);
+                l.setAttribute("stroke", stroke); l.setAttribute("stroke-width", w); l.setAttribute("stroke-linecap", "round");
+                if (dash) l.setAttribute("stroke-dasharray", dash);
+                roadG.appendChild(l);
+            };
+            addLine("rgba(255,255,255,0.04)", 22); addLine("#27272a", 12); addLine("#eab308", 1, "6, 5");
+
+            const addNode = (x, col, label) => {
+                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                c.setAttribute("cx", x); c.setAttribute("cy", roadY); c.setAttribute("r", 6);
+                c.setAttribute("fill", col); c.setAttribute("stroke", "#fff"); c.setAttribute("stroke-width", 1.5);
+                roadG.appendChild(c);
+                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                t.setAttribute("x", x); t.setAttribute("y", roadY - 10); t.setAttribute("fill", "#fff");
+                t.setAttribute("font-size", "8px"); t.setAttribute("font-weight", "800"); t.setAttribute("text-anchor", "middle");
+                t.textContent = label; roadG.appendChild(t);
+            };
+            addNode(sX, "var(--indigo)", "START"); addNode(eX, "var(--teal)", `${dist} ${uD}`);
+
+            stops.forEach((s, i) => {
+                const mX = sX + (s.dist / dist) * w;
+                const mG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                mG.setAttribute("class", "sm");
+                
+                const outer = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                outer.setAttribute("cx", mX); outer.setAttribute("cy", roadY); outer.setAttribute("r", 8);
+                outer.setAttribute("fill", "rgba(244,63,94,0.15)"); outer.setAttribute("stroke", "var(--rose)"); outer.setAttribute("stroke-width", 1);
+                mG.appendChild(outer);
+
+                const inner = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                inner.setAttribute("cx", mX); inner.setAttribute("cy", roadY); inner.setAttribute("r", 4); inner.setAttribute("fill", "var(--rose)");
+                mG.appendChild(inner);
+
+                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                t.setAttribute("x", mX); t.setAttribute("y", roadY + 18); t.setAttribute("fill", "var(--text)");
+                t.setAttribute("font-size", "8px"); t.setAttribute("font-weight", "800"); t.setAttribute("text-anchor", "middle");
+                t.textContent = `#${i+1}`; mG.appendChild(t);
+                roadG.appendChild(mG);
+            });
+            els.rS.appendChild(roadG);
+        }
+
+        function drawChart(dist, pts, uD) {
+            const defs = els.cS.querySelector('defs');
+            els.cS.innerHTML = ''; els.cS.appendChild(defs);
+            
+            const sX = 40, eX = 560, w = eX - sX, sY = 15, eY = 125, h = eY - sY;
+            const getX = (x) => dist > 0 ? sX + (x / dist) * w : sX;
+            const getY = (y) => sY + h * (1 - (y / 100));
+
+            const addGrid = (yVal, isLimit, labelText) => {
+                const y = getY(yVal);
+                const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                l.setAttribute("x1", sX); l.setAttribute("y1", y); l.setAttribute("x2", eX); l.setAttribute("y2", y);
+                l.setAttribute("class", isLimit ? "cgl" : "cg");
+                els.cS.appendChild(l);
+                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                t.setAttribute("x", sX - 6); t.setAttribute("y", y + 3); t.setAttribute("class", "cat"); t.setAttribute("text-anchor", "end");
+                t.textContent = labelText;
+                if (isLimit) t.setAttribute("fill", "var(--rose)");
+                els.cS.appendChild(t);
+            };
+            addGrid(100, false, "100%"); addGrid(50, false, "50%"); addGrid(10, true, "10%");
+
+            const addText = (x, text) => {
+                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                t.setAttribute("x", x); t.setAttribute("y", eY + 15); t.setAttribute("class", "cat"); t.setAttribute("text-anchor", "middle");
+                t.textContent = text; els.cS.appendChild(t);
+            };
+            addText(sX, `0 ${uD}`); addText(eX, `${dist} ${uD}`);
+
+            if (pts.length === 0) return;
+
+            let pathD = "";
+            pts.forEach((p, i) => { pathD += (i === 0 ? "M " : " L ") + getX(p.x) + " " + getY(p.y); });
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", pathD); path.setAttribute("class", "cl");
+            path.setAttribute("stroke", sys === 'imperial' ? "url(#glowG)" : "url(#glowM)");
+            els.cS.appendChild(path);
+
+            pts.forEach((p) => {
+                const px = getX(p.x), py = getY(p.y);
+                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                c.setAttribute("cx", px); c.setAttribute("cy", py); c.setAttribute("r", "3.5");
+                c.setAttribute("class", "cp");
+                els.cS.appendChild(c);
+            });
+        }
+
+        function drawList(stops, uD, uF) {
+            els.sC.innerHTML = '';
+            if (stops.length === 0) {
+                els.sC.innerHTML = '<div class="sit" style="color:var(--text-mut);justify-content:center;font-style:italic">Tank fuel levels are sufficient. No stopovers required.</div>';
+                return;
+            }
+            stops.forEach(s => {
+                const div = document.createElement('div'); div.className = 'sit';
+                div.innerHTML = `<div class="sil"><div class="sb">${s.id}</div><div class="sid"><span class="slo">Stop #${s.id} at ${Math.round(s.dist)} ${uD}</span><span class="ssi">Leg distance: ${Math.round(s.prev)} ${uD}</span></div></div><span class="srf">+${s.refuel.toFixed(1)} ${uF}</span>`;
+                els.sC.appendChild(div);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
