@@ -3,357 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VibeCloset // Weather Outfit Rater</title>
+    <title>VibePacker // Packing Cube Weight Balancer</title>
     <style>
         :root {
             --bg: #09090b; --card: rgba(20,20,23,0.7); --border: rgba(255,255,255,0.06);
             --text: #f4f4f5; --text-mut: #a1a1aa;
             --indigo: #6366f1; --teal: #14b8a6; --rose: #f43f5e;
-            --glow: rgba(99,102,241,0.08);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
         body {
             background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem 1rem;
             background-image: 
-                radial-gradient(circle at 10% 10%, var(--glow) 0%, transparent 40%),
+                radial-gradient(circle at 10% 10%, rgba(99,102,241,0.08) 0%, transparent 40%),
                 radial-gradient(circle at 90% 80%, rgba(20,184,166,0.06) 0%, transparent 40%);
-            display: flex; justify-content: center; transition: background-image 0.5s ease;
+            display: flex; justify-content: center;
         }
-        /* Dynamic ambient weather glows */
-        body.hot { --glow: rgba(245,158,11,0.12); }
-        body.cold { --glow: rgba(14,165,233,0.12); }
-        body.mild { --glow: rgba(16,185,129,0.1); }
-
-        .c { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 1.25rem; }
+        main { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 1.25rem; }
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.8rem; flex-wrap: wrap; gap: 1rem; }
         .lg { display: flex; align-items: center; gap: 0.5rem; }
         .lg h1 { font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, #a5b4fc, #2dd4bf); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .lg p { font-size: 0.75rem; color: var(--text-mut); }
+        
         .tgl { background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 0.15rem; border-radius: 99px; display: flex; position: relative; cursor: pointer; width: 120px; user-select: none; }
         .tb { flex: 1; text-align: center; padding: 0.3rem; font-size: 0.7rem; font-weight: 700; z-index: 2; color: var(--text-mut); }
         .tb.active { color: #fff; }
-        .ts { position: absolute; top: 0.15rem; left: 0.15rem; width: calc(50% - 0.15rem); height: calc(100% - 0.3rem); background: linear-gradient(135deg, var(--indigo), rgba(99,102,241,0.8)); border-radius: 99px; transition: transform 0.2s ease; z-index: 1; }
+        .ts { position: absolute; top: 0.15rem; left: 0.15rem; width: calc(50% - 0.15rem); height: calc(100% - 0.3rem); background: linear-gradient(135deg, var(--indigo), rgba(99,102,241,0.8)); border-radius: 99px; transition: transform 0.2s; z-index: 1; }
         .tgl.f .ts { transform: translateX(100%); background: linear-gradient(135deg, var(--teal), rgba(20,184,166,0.8)); }
         
         .grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
-        @media (min-width: 800px) { .grid { grid-template-columns: 320px 1fr; } }
+        @media (min-width: 800px) { .grid { grid-template-columns: 310px 1fr; } }
         
-        .card { background: var(--card); border: 1px solid var(--border); backdrop-filter: blur(10px); border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+        .card { background: var(--card); border: 1px solid var(--border); backdrop-filter: blur(10px); border-radius: 8px; padding: 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
         .card-title { font-size: 0.9rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-mut); }
         
         .ig { display: flex; flex-direction: column; gap: 0.4rem; }
-        .ih { display: flex; justify-content: space-between; align-items: center; }
         .il { font-size: 0.7rem; color: var(--text-mut); font-weight: 700; text-transform: uppercase; }
-        .iw { display: flex; align-items: center; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.2rem 0.5rem; width: 100%; }
-        .iw input, .iw select { background: transparent; border: none; color: #fff; width: 100%; font-size: 0.85rem; font-weight: 700; outline: none; }
-        .iw select option { background: var(--bg); color: #fff; }
+        .iw { display: flex; align-items: center; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 6px; padding: 0.25rem 0.5rem; width: 100%; }
+        .iw input { background: transparent; border: none; color: #fff; width: 100%; font-size: 0.85rem; font-weight: 700; outline: none; }
         .iu { font-size: 0.75rem; color: var(--text-mut); font-weight: 700; }
         
-        .btn-rate { background: linear-gradient(135deg, var(--indigo), var(--teal)); border: none; border-radius: 0.4rem; padding: 0.75rem; color: #fff; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .btn-rate:hover { opacity: 0.9; }
-        .btn-rate:active { transform: scale(0.98); }
+        .btn-add { background: linear-gradient(135deg, var(--indigo), var(--teal)); border: none; border-radius: 6px; padding: 0.75rem; color: #fff; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-add:hover { opacity: 0.9; }
         
-        /* Verdict Screen */
-        .res-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; border: 1px dashed rgba(255,255,255,0.08); border-radius: 0.5rem; background: rgba(0,0,0,0.15); min-height: 180px; text-align: center; position: relative; overflow: hidden; }
-        .scanner { border: 4px solid rgba(255,255,255,0.05); border-top-color: var(--indigo); border-radius: 50%; width: 45px; height: 45px; animation: spin 0.6s linear infinite; display: none; }
+        .total-display { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.25rem; border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,0.15); text-align: center; }
+        .total-val { font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.25rem; }
+        .total-lbl { font-size: 0.65rem; color: var(--text-mut); font-weight: 700; text-transform: uppercase; }
         
-        .score-circle { width: 70px; height: 70px; border-radius: 50%; border: 4px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; margin-bottom: 0.75rem; transition: border-color 0.3s; }
-        .score-circle.bad { border-color: var(--rose); color: var(--rose); }
-        .score-circle.mid { border-color: #f59e0b; color: #f59e0b; }
-        .score-circle.good { border-color: var(--teal); color: var(--teal); }
-
-        .verdict-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; }
-        .verdict-text { font-size: 0.8rem; color: var(--text-mut); line-height: 1.4; max-width: 400px; }
+        .card.over { border-color: var(--rose); box-shadow: 0 0 15px rgba(244,63,94,0.15); }
+        .card.over .total-val { color: var(--rose); text-shadow: 0 0 10px rgba(244,63,94,0.3); }
         
-        .history-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-mut); margin-top: 0.5rem; }
-        .history-list { display: flex; flex-direction: column; gap: 0.35rem; max-height: 200px; overflow-y: auto; }
-        .history-list::-webkit-scrollbar { width: 3px; }
-        .history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-        .history-item { background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.02); border-radius: 0.4rem; padding: 0.5rem 0.75rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
-        .history-left { display: flex; flex-direction: column; gap: 0.15rem; }
-        .history-outfit { font-size: 0.65rem; color: var(--text-mut); }
-        .history-badge { padding: 0.15rem 0.4rem; border-radius: 99px; font-weight: 700; font-size: 0.65rem; }
-        .history-badge.bad { background: rgba(244,63,94,0.1); color: var(--rose); }
-        .history-badge.mid { background: rgba(245,158,11,0.1); color: #f59e0b; }
-        .history-badge.good { background: rgba(20,184,166,0.1); color: var(--teal); }
+        .alert-banner { background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); border-radius: 6px; padding: 0.5rem; text-align: center; color: #fca5a5; font-size: 0.75rem; font-weight: 700; display: none; }
         
-        .wn { background: rgba(244,63,94,0.05); border: 1px solid rgba(244,63,94,0.2); border-radius: 0.4rem; padding: 0.4rem 0.6rem; display: none; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: #fca5a5; }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-clear { background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem; color: var(--text-mut); font-size: 0.8rem; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-clear:hover { color: #fff; border-color: rgba(255,255,255,0.15); }
+        
+        .cubes-row { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        @media (min-width: 600px) { .cubes-row { grid-template-columns: 1fr 1fr; } }
+        
+        .cube-col { background: rgba(255,255,255,0.015); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .cube-col.indigo { border-top: 3px solid var(--indigo); }
+        .cube-col.teal { border-top: 3px solid var(--teal); }
+        
+        .cube-header { display: flex; justify-content: space-between; align-items: baseline; }
+        .cube-name { font-size: 0.95rem; font-weight: 700; color: #fff; }
+        .cube-weight { font-size: 0.95rem; font-weight: 800; font-family: monospace; }
+        .cube-col.indigo .cube-weight { color: var(--indigo); }
+        .cube-col.teal .cube-weight { color: var(--teal); }
+        
+        .prog { width: 100%; height: 5px; background: rgba(255,255,255,0.04); border-radius: 99px; overflow: hidden; }
+        .prog-fill { height: 100%; width: 0%; transition: 0.3s; }
+        .cube-col.indigo .prog-fill { background-color: var(--indigo); }
+        .cube-col.teal .prog-fill { background-color: var(--teal); }
+        .cube-col.over-limit .prog-fill { background-color: var(--rose) !important; }
+        
+        .items-list { display: flex; flex-direction: column; gap: 0.4rem; min-height: 180px; }
+        .item-row { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 0.45rem 0.6rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; user-select: none; }
+        .item-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+        .item-details { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+        .item-name { font-weight: 600; color: #fff; }
+        .item-weight { font-size: 0.75rem; color: var(--text-mut); }
+        .item-actions { display: flex; align-items: center; gap: 0.4rem; }
+        .btn-del { background: transparent; border: none; font-size: 0.75rem; cursor: pointer; padding: 0.15rem; color: var(--text-mut); }
+        .btn-del:hover { color: var(--rose); }
+        
+        .empty-placeholder { color: var(--text-mut); font-size: 0.75rem; font-style: italic; text-align: center; margin-top: 2rem; }
+        
+        .wn { background: rgba(244,63,94,0.05); border: 1px solid rgba(244,63,94,0.2); border-radius: 6px; padding: 0.4rem 0.6rem; display: none; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: #fca5a5; }
+        
+        .test-widget { position: fixed; bottom: 1rem; right: 1rem; background: rgba(15,15,20,0.95); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; max-width: 250px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000; font-size: 0.7rem; display: none; }
+        .test-title { font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.3rem; margin-bottom: 0.4rem; color: #fff; display: flex; justify-content: space-between; }
+        .test-line { display: flex; justify-content: space-between; margin-bottom: 0.2rem; }
+        .test-ok { color: var(--teal); font-weight: 700; }
+        .test-fail { color: var(--rose); font-weight: 700; }
+        
         footer { font-size: 0.65rem; color: var(--text-mut); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.6rem; display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
     </style>
 </head>
 <body>
-    <div class="c" id="app">
+    <main>
         <header>
             <div class="lg">
-                <div class="lgi">🧥</div>
+                <div class="lgi">💼</div>
                 <div>
-                    <h1>VibeCloset</h1>
-                    <p>Weather Outfit Rater</p>
+                    <h1>VibePacker</h1>
+                    <p>Packing Cube Weight Balancer</p>
                 </div>
             </div>
-            <div class="tgl" id="unitToggle" onclick="toggleUnit()">
+            <div class="tgl" id="unitToggle" onclick="toggleUnit()" role="switch" aria-checked="false" aria-label="Unit Switcher (KG or LBS)">
                 <div class="ts"></div>
-                <div class="tb active" id="btnC">CELSIUS</div>
-                <div class="tb" id="btnF">FAHRENHEIT</div>
+                <div class="tb active" id="btnKg">KG</div>
+                <div class="tb" id="btnLbs">LBS</div>
             </div>
         </header>
 
         <div class="grid">
-            <!-- Inputs Card -->
-            <div class="card">
-                <div class="card-title">⚙️ CONFIGURATION</div>
+            <!-- Left Side -->
+            <div class="card" id="configCard">
+                <div class="card-title">📦 Limits & Items</div>
                 <div class="wn" id="warnBox">⚠️ <span id="warnText"></span></div>
                 
-                <!-- Temperature -->
                 <div class="ig">
-                    <label class="il" for="tempInput">Outdoor Temperature</label>
+                    <label class="il" for="bagLimit">Max Suitcase Limit</label>
                     <div class="iw">
-                        <input type="number" id="tempInput" placeholder="Enter temp..."><span class="iu" id="tempUnit">°C</span>
+                        <input type="number" id="bagLimit" min="1" max="100" step="0.5" value="23" aria-label="Maximum Suitcase Weight Limit">
+                        <span class="iu" id="limitUnit">KG</span>
                     </div>
                 </div>
 
-                <!-- Top Layer -->
                 <div class="ig">
-                    <label class="il" for="topSelect">Top Layer</label>
+                    <label class="il" for="itemName">Item Name</label>
                     <div class="iw">
-                        <select id="topSelect">
-                            <option value="tshirt">👕 T-Shirt</option>
-                            <option value="jacket">🧥 Light Jacket</option>
-                            <option value="coat">🧥 Heavy Coat</option>
-                        </select>
+                        <input type="text" id="itemName" placeholder="e.g. Jackets" aria-label="Item Name">
+                    </div>
+                </div>
+                <div class="ig">
+                    <label class="il" for="itemWeight">Item Weight</label>
+                    <div class="iw">
+                        <input type="number" id="itemWeight" min="0.1" max="50" step="0.1" placeholder="0.0" aria-label="Item Weight">
+                        <span class="iu" id="weightUnit">KG</span>
                     </div>
                 </div>
 
-                <!-- Bottom Layer -->
-                <div class="ig">
-                    <label class="il" for="bottomSelect">Bottom Layer</label>
-                    <div class="iw">
-                        <select id="bottomSelect">
-                            <option value="shorts">🩳 Shorts</option>
-                            <option value="jeans">👖 Jeans</option>
-                            <option value="thermal">👖 Thermal Pants</option>
-                        </select>
-                    </div>
+                <button class="btn-add" onclick="triggerAddItem()" aria-label="Add Item to Packing Cube">➕ Add Item</button>
+
+                <div class="total-display">
+                    <div class="total-val" id="valGrandTotal" aria-live="polite" role="status">0.0</div>
+                    <div class="total-lbl" id="lblGrandTotal">Combined Total (KG)</div>
                 </div>
 
-                <!-- Footwear -->
-                <div class="ig">
-                    <label class="il" for="footSelect">Footwear</label>
-                    <div class="iw">
-                        <select id="footSelect">
-                            <option value="sandals">🩴 Sandals</option>
-                            <option value="sneakers">👟 Sneakers</option>
-                            <option value="boots">🥾 Boots</option>
-                        </select>
-                    </div>
+                <div class="alert-banner" id="limitWarning" role="alert" aria-live="assertive">
+                    🚨 OVERWEIGHT! Rebalance items to stay under limit.
                 </div>
 
-                <button class="btn-rate" onclick="rateOutfit()">🔍 Rate My Outfit</button>
+                <button class="btn-clear" onclick="triggerClearAll()" aria-label="Clear All Items">🗑️ Clear All</button>
             </div>
 
-            <!-- Dashboard Output -->
+            <!-- Right Side -->
             <div class="c" style="gap: 1.25rem;">
-                <div class="card">
-                    <div class="card-title">📊 RATING RESULTS</div>
-                    <div class="res-panel" id="resPanel">
-                        <div class="scanner" id="spinner"></div>
-                        <div id="resContent" style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="color: var(--text-mut); font-size: 0.8rem; font-style: italic;">Enter temperature and click "Rate My Outfit" to start scanning.</div>
-                        </div>
-                    </div>
+                <div class="alert-banner" id="visualAlert" style="display: none;" role="alert" aria-live="assertive">
+                    🚨 Weight Limit Exceeded!
                 </div>
+                
+                <div class="cubes-row">
+                    <div class="cube-col indigo" id="colCubeA">
+                        <div class="cube-header">
+                            <span class="cube-name">Packing Cube A 🌿</span>
+                            <span class="cube-weight" id="valWeightA" aria-live="polite" role="status">0.0 KG</span>
+                        </div>
+                        <div class="prog">
+                            <div class="prog-fill" id="fillA"></div>
+                        </div>
+                        <div class="items-list" id="listCubeA" aria-live="polite" role="status"></div>
+                    </div>
 
-                <!-- History Card -->
-                <div class="card">
-                    <div class="history-title">🕒 Rating History (Last 5)</div>
-                    <div class="history-list" id="historyContainer">
-                        <div style="color: var(--text-mut); font-size: 0.75rem; font-style: italic; padding: 0.5rem 0;">No previous outfit rating history found.</div>
+                    <div class="cube-col teal" id="colCubeB">
+                        <div class="cube-header">
+                            <span class="cube-name">Packing Cube B ✈️</span>
+                            <span class="cube-weight" id="valWeightB" aria-live="polite" role="status">0.0 KG</span>
+                        </div>
+                        <div class="prog">
+                            <div class="prog-fill" id="fillB"></div>
+                        </div>
+                        <div class="items-list" id="listCubeB" aria-live="polite" role="status"></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <footer>
-            <div>VibeCloset &bull; SPA</div>
+            <div>VibePacker &bull; SPA</div>
             <div>Built for Vibedev Duel</div>
         </footer>
+    </main>
+
+    <div class="test-widget" id="testWidget">
+        <div class="test-title">🧪 Unit Test Report <span onclick="$('testWidget').style.display='none'" style="cursor:pointer">❌</span></div>
+        <div id="testLines"></div>
     </div>
 
     <script>
-        let unit = 'C';
+        /** @typedef {{id:string, name:string, weight:number, cube:string}} BagItem */
+
+        let unitSystem = 'KG';
+        /** @type {BagItem[]} */
+        let stateItems = [];
+
         const $ = id => document.getElementById(id);
-        const els = {
-            toggle: $('unitToggle'), btnC: $('btnC'), btnF: $('btnF'),
-            temp: $('tempInput'), uLbl: $('tempUnit'),
-            top: $('topSelect'), bottom: $('bottomSelect'), foot: $('footSelect'),
-            spinner: $('spinner'), resContent: $('resContent'),
-            history: $('historyContainer'), wB: $('warnBox'), wT: $('warnText')
-        };
+        const els = {};
+        ['unitToggle','btnKg','btnLbs','bagLimit','itemName','itemWeight','limitUnit','weightUnit','valGrandTotal','lblGrandTotal','limitWarning','visualAlert','colCubeA','colCubeB','valWeightA','valWeightB','fillA','fillB','listCubeA','listCubeB','configCard','warnBox','warnText','testWidget','testLines'].forEach(id => els[id] = $(id));
 
-        let historyLog = JSON.parse(localStorage.getItem('outfit_history')) || [];
+        els.bagLimit.addEventListener('input', () => {
+            const limit = parseFloat(els.bagLimit.value) || 0;
+            if (limit <= 0 || limit > 100) showWarning("Limit must be positive and between 1 and 100.");
+            else hideWarning();
+            updateTotals();
+        });
 
-        // Optimal weather range specifications (Celsius)
-        const rules = {
-            top: {
-                tshirt: { min: 23, max: 50, label: "T-Shirt" },
-                jacket: { min: 14, max: 23, label: "Light Jacket" },
-                coat: { min: -50, max: 14, label: "Heavy Coat" }
-            },
-            bottom: {
-                shorts: { min: 21, max: 50, label: "Shorts" },
-                jeans: { min: 9, max: 21, label: "Jeans" },
-                thermal: { min: -50, max: 9, label: "Thermal Pants" }
-            },
-            foot: {
-                sandals: { min: 22, max: 50, label: "Sandals" },
-                sneakers: { min: 9, max: 22, label: "Sneakers" },
-                boots: { min: -50, max: 9, label: "Boots" }
-            }
-        };
+        /** @param {number} v @param {boolean} l @return {number} */
+        const convertWeight = (v, l) => l ? Math.round(v * 2.20462 * 10) / 10 : Math.round((v / 2.20462) * 10) / 10;
 
         function toggleUnit() {
-            const rawVal = parseFloat(els.temp.value);
-            const isC = unit === 'C';
-            unit = isC ? 'F' : 'C';
+            const isKg = unitSystem === 'KG';
+            unitSystem = isKg ? 'LBS' : 'KG';
             
-            els.toggle.classList.toggle('f', isC);
-            els.btnC.classList.toggle('active', !isC);
-            els.btnF.classList.toggle('active', isC);
-            els.uLbl.innerText = '°' + unit;
+            els.unitToggle.classList.toggle('f', isKg);
+            els.unitToggle.setAttribute('aria-checked', isKg ? 'true' : 'false');
+            els.btnKg.classList.toggle('active', !isKg);
+            els.btnLbs.classList.toggle('active', isKg);
+            els.limitUnit.innerText = unitSystem;
+            els.weightUnit.innerText = unitSystem;
+            els.lblGrandTotal.innerText = `Combined Total (${unitSystem})`;
 
-            if (!isNaN(rawVal)) {
-                // Convert value
-                els.temp.value = isC 
-                    ? Math.round(rawVal * 1.8 + 32)
-                    : Math.round((rawVal - 32) / 1.8);
+            const currentLimit = parseFloat(els.bagLimit.value) || 0;
+            els.bagLimit.value = convertWeight(currentLimit, isKg);
+
+            stateItems = stateItems.map(item => ({ ...item, weight: convertWeight(item.weight, isKg) }));
+            updateTotals();
+        }
+
+        /** @param {string} n @param {number} w @return {boolean} */
+        function validateInputs(n, w) {
+            if (!n || n.trim().length === 0) { showWarning("Item name must not be empty."); return false; }
+            if (n.length > 25) { showWarning("Item name must be 25 characters or less."); return false; }
+            if (isNaN(w) || w <= 0) { showWarning("Item weight must be greater than 0."); return false; }
+            if (w > 50) { showWarning("Weight per item cannot exceed 50."); return false; }
+            hideWarning();
+            return true;
+        }
+
+        /** @param {string} m */
+        const showWarning = m => { els.warnText.innerText = m; els.warnBox.style.display = 'flex'; };
+        const hideWarning = () => els.warnBox.style.display = 'none';
+
+        function triggerAddItem() {
+            const n = els.itemName.value, w = parseFloat(els.itemWeight.value);
+            if (validateInputs(n, w)) {
+                addItem(n, w);
+                els.itemName.value = ''; els.itemWeight.value = ''; els.itemName.focus();
             }
-            updateAmbientGlow();
         }
 
-        function updateAmbientGlow() {
-            const tempVal = parseFloat(els.temp.value);
-            document.body.className = '';
-            if (isNaN(tempVal)) return;
-
-            let tempC = unit === 'C' ? tempVal : (tempVal - 32) / 1.8;
-            if (tempC >= 28) document.body.className = 'hot';
-            else if (tempC <= 12) document.body.className = 'cold';
-            else document.body.className = 'mild';
+        /** @param {string} n @param {number} w */
+        function addItem(n, w) {
+            stateItems.push({
+                id: 'i_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                name: n.trim(), weight: w, cube: 'A'
+            });
+            updateTotals();
         }
 
-        els.temp.addEventListener('input', updateAmbientGlow);
+        /** @param {string} id */
+        function moveItem(id) {
+            stateItems = stateItems.map(i => i.id === id ? { ...i, cube: i.cube === 'A' ? 'B' : 'A' } : i);
+            updateTotals();
+        }
 
-        function rateOutfit() {
-            const tempVal = parseFloat(els.temp.value);
-            if (isNaN(tempVal)) {
-                els.wT.innerText = "Please enter today's outdoor temperature.";
-                els.wB.style.display = 'flex';
+        /** @param {string} id */
+        function deleteItem(id) {
+            stateItems = stateItems.filter(i => i.id !== id);
+            updateTotals();
+        }
+
+        const triggerClearAll = () => clearAll();
+        function clearAll() { stateItems = []; hideWarning(); updateTotals(); }
+        const updateTotals = () => updateUI(calculateTotals());
+
+        /** @return {{totalA:number, totalB:number, grand:number}} */
+        function calculateTotals() {
+            let a = 0, b = 0;
+            stateItems.forEach(i => i.cube === 'A' ? a += i.weight : b += i.weight);
+            return { totalA: Math.round(a * 10) / 10, totalB: Math.round(b * 10) / 10, grand: Math.round((a + b) * 10) / 10 };
+        }
+
+        /** @param {{totalA:number, totalB:number, grand:number}} t */
+        function updateUI(t) {
+            const lim = parseFloat(els.bagLimit.value) || 0;
+            els.valWeightA.innerText = `${t.totalA.toFixed(1)} ${unitSystem}`;
+            els.valWeightB.innerText = `${t.totalB.toFixed(1)} ${unitSystem}`;
+            els.valGrandTotal.innerText = t.grand.toFixed(1);
+
+            const pctA = lim > 0 ? Math.min(100, (t.totalA / lim) * 100) : 0;
+            const pctB = lim > 0 ? Math.min(100, (t.totalB / lim) * 100) : 0;
+            els.fillA.style.width = pctA + '%'; els.fillB.style.width = pctB + '%';
+
+            const isOver = t.grand > lim;
+            els.configCard.classList.toggle('over', isOver);
+            els.limitWarning.style.display = isOver ? 'block' : 'none';
+            els.visualAlert.style.display = isOver ? 'block' : 'none';
+
+            els.colCubeA.classList.toggle('over-limit', t.totalA > lim);
+            els.colCubeB.classList.toggle('over-limit', t.totalB > lim);
+
+            renderList('A', els.listCubeA); renderList('B', els.listCubeB);
+        }
+
+        /** @param {string} cId @param {HTMLElement} listEl */
+        function renderList(cId, listEl) {
+            listEl.innerHTML = '';
+            const items = stateItems.filter(i => i.cube === cId);
+            if (items.length === 0) {
+                listEl.innerHTML = `<div class="empty-placeholder">Cube empty. Click items in the other cube to move.</div>`;
                 return;
             }
-            els.wB.style.display = 'none';
-
-            // Show Scanning animation
-            els.spinner.style.display = 'block';
-            els.resContent.style.display = 'none';
-
-            setTimeout(() => {
-                els.spinner.style.display = 'none';
-                els.resContent.style.display = 'flex';
-
-                let tempC = unit === 'C' ? tempVal : (tempVal - 32) / 1.8;
-                
-                const scoreItem = (val, opt) => {
-                    const r = rules[opt][val];
-                    if (tempC >= r.min && tempC <= r.max) return 10;
-                    const dev = tempC < r.min ? r.min - tempC : tempC - r.max;
-                    return Math.max(1, 10 - Math.round(dev * 0.5));
-                };
-
-                const scoreTop = scoreItem(els.top.value, 'top');
-                const scoreBottom = scoreItem(els.bottom.value, 'bottom');
-                const scoreFoot = scoreItem(els.foot.value, 'foot');
-
-                const totalScore = Math.round((scoreTop + scoreBottom + scoreFoot) / 3);
-
-                // Build verdict and fun text
-                let title = "", desc = "";
-                
-                if (totalScore >= 9) {
-                    title = "Perfect Match! 🌟";
-                    desc = tempC >= 18 
-                        ? "Styling and perfectly comfortable for today's weather! 😎"
-                        : "Perfect choice for a brisk walk! Keeps you cozy and warm. 🍂";
-                } else if (totalScore >= 7) {
-                    title = "Great Fit! 👌";
-                    desc = "Very good comfort score. Keep an eye on the wind, but you're set to go!";
-                } else if (totalScore >= 5) {
-                    title = "Average Choice 🌤️";
-                    desc = "Not bad, but you might feel a bit of a breeze or start stuffing up later. Consider a quick layer adjustment.";
-                } else if (totalScore >= 3) {
-                    title = "Fashion Alert 🧣";
-                    desc = "A bit mismatched. You will likely feel uncomfortable in this setup. Swapping an item is highly recommended.";
-                } else {
-                    title = "Absolute Disaster! 💀";
-                    // Custom hyper-specific comments
-                    if (tempC >= 25) {
-                        desc = "You'll be sweating in 10 minutes 🥵! Heavy layers in this heat is a total fashion crime.";
-                    } else {
-                        desc = "Frostbite alert! You'll be shivering in no time 🥶. Go grab some heavier gear immediately.";
-                    }
-                }
-
-                // Render score UI
-                let badgeClass = totalScore <= 4 ? 'bad' : (totalScore <= 7 ? 'mid' : 'good');
-                els.resContent.innerHTML = `
-                    <div class="score-circle ${badgeClass}">${totalScore}/10</div>
-                    <div class="verdict-title">${title}</div>
-                    <div class="verdict-text">${desc}</div>
-                `;
-
-                // Log into history
-                const itemLabel = (opt, val) => rules[opt][val].label;
-                const newLog = {
-                    score: totalScore,
-                    temp: Math.round(tempVal) + '°' + unit,
-                    outfit: `${itemLabel('top', els.top.value)}, ${itemLabel('bottom', els.bottom.value)}, ${itemLabel('foot', els.foot.value)}`,
-                    badge: badgeClass
-                };
-
-                historyLog.unshift(newLog);
-                if (historyLog.length > 5) historyLog.pop();
-
-                // Save log
-                localStorage.setItem('outfit_history', JSON.stringify(historyLog));
-                renderHistory();
-            }, 500);
-        }
-
-        function renderHistory() {
-            els.history.innerHTML = '';
-            if (historyLog.length === 0) {
-                els.history.innerHTML = '<div style="color: var(--text-mut); font-size: 0.75rem; font-style: italic; padding: 0.5rem 0;">No previous outfit rating history found.</div>';
-                return;
-            }
-            historyLog.forEach(log => {
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.innerHTML = `
-                    <div class="history-left">
-                        <span style="font-weight: 700; color: #fff;">At ${log.temp}</span>
-                        <span class="history-outfit">${log.outfit}</span>
-                    </div>
-                    <span class="history-badge ${log.badge}">${log.score}/10</span>
-                `;
-                els.history.appendChild(item);
+            items.forEach(i => {
+                const r = document.createElement('div');
+                r.className = 'item-row'; r.setAttribute('role', 'button'); r.setAttribute('tabindex', '0');
+                r.setAttribute('aria-label', `Move ${i.name} weighing ${i.weight} ${unitSystem}`);
+                r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); moveItem(i.id); } });
+                r.addEventListener('click', e => { if (e.target.closest('.btn-del')) return; moveItem(i.id); });
+                r.innerHTML = `<div class="item-details"><span class="item-name">${i.name}</span><span class="item-weight">${i.weight.toFixed(1)} ${unitSystem}</span></div><div class="item-actions"><button class="btn-del" onclick="deleteItem('${i.id}')" aria-label="Delete ${i.name}">❌</button></div>`;
+                listEl.appendChild(r);
             });
         }
 
-        // Initialize history
-        window.addEventListener('DOMContentLoaded', () => {
-            renderHistory();
-            updateAmbientGlow();
-        });
+        function runUnitTests() {
+            console.group('VibePacker Unit Tests');
+            let passes = 0, fails = 0; const logLines = [];
+            const assertTest = (name, assertion) => {
+                if (assertion) { passes++; logLines.push({ name, status: 'OK', class: 'test-ok' }); }
+                else { fails++; logLines.push({ name, status: 'FAIL', class: 'test-ok' }); }
+            };
+
+            assertTest("10 kg to Lbs", Math.abs(convertWeight(10, true) - 22.0) < 0.1);
+            assertTest("22 lbs to Kg", Math.abs(convertWeight(22, false) - 10.0) < 0.1);
+            clearAll(); addItem("Coat", 5);
+            assertTest("Add item", stateItems.length === 1);
+            assertTest("Init cube", stateItems[0].cube === 'A');
+            let t = calculateTotals();
+            assertTest("Weight A", t.totalA === 5.0);
+            assertTest("Grand total", t.grand === 5.0);
+
+            const id = stateItems[0].id; moveItem(id);
+            assertTest("Swap cube", stateItems[0].cube === 'B');
+            t = calculateTotals();
+            assertTest("Weight B", t.totalB === 5.0);
+            assertTest("Weight A empty", t.totalA === 0.0);
+
+            assertTest("Val empty", validateInputs("", 10) === false);
+            assertTest("Val long", validateInputs("A".repeat(30), 10) === false);
+            assertTest("Val neg", validateInputs("Boots", -5) === false);
+            assertTest("Val extreme", validateInputs("Boots", 60) === false);
+            console.groupEnd(); clearAll();
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('test') === 'true') {
+                els.testWidget.style.display = 'block';
+                els.testLines.innerHTML = logLines.map(l => `<div class="test-line"><span>${l.name}</span><span class="${l.class}">${l.status}</span></div>`).join('') + `<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:0.3rem;margin-top:0.3rem;font-weight:700;display:flex;justify-content:space-between"><span>Summary:</span><span>${passes} passed / ${fails} failed</span></div>`;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => { updateTotals(); runUnitTests(); });
     </script>
 </body>
 </html>
